@@ -26,7 +26,8 @@ def update_use_parallax_ui(self, context):
      context.view_layer['VRT_disable_parallax'] = bool(not use_parallax)
 
 def update_export_path_ui(self, context):
-    context.scene.vrt.export_directory = os.path.abspath(context.scene.vrt.export_directory)
+    if context.scene.vrt.export_directory != os.path.abspath(context.scene.vrt.export_directory):
+        context.scene.vrt.export_directory = os.path.abspath(context.scene.vrt.export_directory)
 
 
 # Collection properties

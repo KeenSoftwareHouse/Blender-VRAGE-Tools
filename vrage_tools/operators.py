@@ -93,9 +93,13 @@ class VRT_OT_ExportCollisions(Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
-        cls.poll_message_set("MSFT_Physics module not installed")
-        return ('MSFT_Physics' in context.preferences.addons.keys())
+        is_object_mode = context.mode == 'OBJECT'
+
+        poll_message = ""
+        if not is_object_mode:
+            poll_message = "Mode is not set to 'Object Mode'. "
+        cls.poll_message_set(poll_message)
+        return is_object_mode
 
     def execute(self, context):
         objs = get_selected_objects()
@@ -683,6 +687,7 @@ class VRT_OT_QuickExportCollisions(Operator):
         if dir_set: # if path is not empty string, check that it's valid
             dir_set = os.path.exists(context.scene.vrt.export_directory)
         physics_installed = True #('MSFT_Physics' in context.preferences.addons.keys())
+        is_object_mode = context.mode == 'OBJECT'
 
         poll_message = ""
         if not name_set:
@@ -691,9 +696,11 @@ class VRT_OT_QuickExportCollisions(Operator):
             poll_message += "Export directory is not valid. "
         if not physics_installed:
             poll_message += "MSFT_Physics module not installed. "
+        if not is_object_mode:
+            poll_message += "Mode is not set to 'Object Mode'. "
         cls.poll_message_set(poll_message)
 
-        return name_set*dir_set*physics_installed
+        return name_set*dir_set*physics_installed*is_object_mode
 
     # ivoke a confirmation popup
     def invoke(self, context, event):
