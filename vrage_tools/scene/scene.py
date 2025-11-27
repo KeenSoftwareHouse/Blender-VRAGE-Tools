@@ -137,3 +137,8 @@ class VRT_Scene(PropertyGroup):
         name="Limit to",
         description="Limit which objects to export"
     ) # type: ignore
+
+    use_experimental_features: BoolProperty(
+        name="Show Experimental",
+        description="Show experimental features: this section is WIP and subject to change"
+    ) # type: ignore

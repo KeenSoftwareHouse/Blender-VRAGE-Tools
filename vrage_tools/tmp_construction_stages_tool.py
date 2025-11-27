@@ -173,6 +173,7 @@ def detach_faces_by_suffixes(obj, suffix_material_map):
 class OBJECT_OT_detach_materials(bpy.types.Operator):
 	bl_idname = "object.detach_materials_cut_glass_decals"
 	bl_label = "Detach Materials: Cut / Glass / Decals / Grate"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
 	def execute(self, context):
 		selected_objs = [o for o in context.selected_objects if o.type == 'MESH']
@@ -227,6 +228,7 @@ class OBJECT_OT_detach_materials(bpy.types.Operator):
 class OBJECT_OT_apply_selected_properties(bpy.types.Operator):
 	bl_label = "Apply Selected Construction Properties"
 	bl_idname = "object.apply_selected_properties"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
 	def execute(self, context):
 		props = context.scene.construction_props
@@ -270,7 +272,7 @@ class OBJECT_OT_apply_selected_properties(bpy.types.Operator):
 		elif "ConstructionMeshOrderDuration" in obj:
 			del obj["ConstructionMeshOrderDuration"]
 
-		# ✅ Extract Fracture_XX prefix
+		# Extract Fracture_XX prefix
 		base_match = re.match(r"^(Fracture_\d+)", obj.name)
 		if not base_match:
 			print(f"[Apply] Skipping rename/group: {obj.name} has no valid Fracture_XX name.")
@@ -278,7 +280,7 @@ class OBJECT_OT_apply_selected_properties(bpy.types.Operator):
 
 		base = base_match.group(1)
 
-		# ✅ Determine name suffix based on preset
+		# Determine name suffix based on preset
 		if preset_name == "Default":
 			target_name = base
 		elif preset_name == "FractureCut":
@@ -286,7 +288,7 @@ class OBJECT_OT_apply_selected_properties(bpy.types.Operator):
 		else:
 			target_name = f"{base}_{preset_name}"
 
-		# ✅ Rename if different
+		# Rename if different
 		if obj.name != target_name:
 			if "ColliderMeshGroups" in obj:
 				del obj["ColliderMeshGroups"]
@@ -298,7 +300,7 @@ class OBJECT_OT_apply_selected_properties(bpy.types.Operator):
 			print(f"[Apply] Renaming {obj.name} to {new_name}")
 			obj.name = new_name
 
-		# ✅ Assign group
+		# Assign group
 		if preset_name in {"Hide", "Support", "FrameCut"}:
 			group_name = f"{base}_{preset_name}"
 		else:
@@ -373,7 +375,7 @@ class ConstructionPropertySettings(bpy.types.PropertyGroup):
 			self.type = t
 			self.visibility = v
 
-			# ✅ For Support, Glass, GratingMetallic — no preset assigned
+			# For Support, Glass, GratingMetallic — no preset assigned
 			if preset == "GratingMetallic":
 				self.preset = ""
 				self.apply_preset = False
@@ -490,16 +492,16 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_parent_id = 'VRT_PT_BlockProperties'
+	bl_options = {'DEFAULT_CLOSED'}
 	bl_order = 99
-	
-	# experimantal_enabled: bpy.props.BoolProperty(
-	# 	name="Enable Experimental",
-	# 	description="These features are a temporary implementation"
-	# )
 
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.construction_props
+
+		layout.prop(context.scene.vrt, "use_experimental_features")
+		if not context.scene.vrt.use_experimental_features:
+			return
 
 		layout.prop(props, "selected_preset", text="Presets")
 
@@ -537,10 +539,6 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 		layout.prop(props, "merge_to_existing", text="Merge to existing mesh")
 		layout.operator("object.detach_materials_cut_glass_decals", icon="MOD_EXPLODE")
 		layout.prop(props, "make_parent_on_detach", text="Make Parent")
-		layout.separator()
-		layout.label(text="Quick Select by Name:")
-		layout.prop(props, "select_name_filter", text="")
-		layout.operator("object.select_by_name_filter", text="Select", icon="RESTRICT_SELECT_OFF")
 		
 		layout.separator()
 		box = layout.box()
@@ -555,205 +553,186 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 			box.separator()
 			box.operator("object.set_collidermeshgroups", icon='GROUP')
 
-class OBJECT_OT_select_objects_by_name(bpy.types.Operator):
-	bl_idname = "object.select_by_name_filter"
-	bl_label = "Select by Name Filter"
-
-	def execute(self, context):
-		filter_text = context.scene.construction_props.select_name_filter.lower()
-		count = 0
-		bpy.ops.object.select_all(action='DESELECT')
-
-		for obj in bpy.context.scene.objects:
-			if (
-				obj.type == 'MESH'
-				and not obj.hide_viewport
-				and obj.visible_get()
-				and filter_text in obj.name.lower()
-			):
-				obj.select_set(True)
-				count += 1
-
-		self.report({'INFO'}, f"Selected {count} object(s) containing '{filter_text}' (visible only)")
-		return {'FINISHED'}
-		
-# ===============================================================
-# === GROUP & COLLIDERMESHGROUPS OPERATORS ======================
-# ===============================================================
+# region GROUP & COLLIDERMESHGROUPS OPERATORS
 
 class OBJECT_OT_SetFractureGroupDefault(bpy.types.Operator):
-    bl_idname = "object.set_fracture_group_default"
-    bl_label = "Set Group: Default"
-    bl_description = "Set 'Group' attribute using Fracture_XX prefix"
+	bl_idname = "object.set_fracture_group_default"
+	bl_label = "Set Group: Default"
+	bl_description = "Set 'Group' attribute using Fracture_XX prefix"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def execute(self, context):
-        for obj in context.selected_objects:
-            if obj.type != 'MESH':
-                self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
-                continue
+	def execute(self, context):
+		for obj in context.selected_objects:
+			if obj.type != 'MESH':
+				self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
+				continue
 
-            match = re.match(r"(Fracture_\d+)", obj.name)
-            if match:
-                group_name = match.group(1)
+			match = re.match(r"(Fracture_\d+)", obj.name)
+			if match:
+				group_name = match.group(1)
 
-                if "group" in obj:
-                    del obj["group"]
-                obj["Group"] = group_name
+				if "group" in obj:
+					del obj["group"]
+				obj["Group"] = group_name
 
-                self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
-                print(f"[Default] {obj.name}: Group set to '{group_name}'")
-            else:
-                self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
-                print(f"[Default] {obj.name}: skipped (no matching prefix)")
-        return {'FINISHED'}
+				self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
+				print(f"[Default] {obj.name}: Group set to '{group_name}'")
+			else:
+				self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
+				print(f"[Default] {obj.name}: skipped (no matching prefix)")
+		return {'FINISHED'}
 
 
 class OBJECT_OT_SetFractureGroupHide(bpy.types.Operator):
-    bl_idname = "object.set_fracture_group_hide"
-    bl_label = "Set Group: Hide"
-    bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_Hide'"
+	bl_idname = "object.set_fracture_group_hide"
+	bl_label = "Set Group: Hide"
+	bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_Hide'"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def execute(self, context):
-        for obj in context.selected_objects:
-            if obj.type != 'MESH':
-                self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
-                continue
+	def execute(self, context):
+		for obj in context.selected_objects:
+			if obj.type != 'MESH':
+				self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
+				continue
 
-            match = re.match(r"(Fracture_\d+)", obj.name)
-            if match:
-                group_name = match.group(1) + "_Hide"
+			match = re.match(r"(Fracture_\d+)", obj.name)
+			if match:
+				group_name = match.group(1) + "_Hide"
 
-                if "group" in obj:
-                    del obj["group"]
-                obj["Group"] = group_name
+				if "group" in obj:
+					del obj["group"]
+				obj["Group"] = group_name
 
-                self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
-                print(f"[Hide] {obj.name}: Group set to '{group_name}'")
-            else:
-                self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
-                print(f"[Hide] {obj.name}: skipped (no matching prefix)")
-        return {'FINISHED'}
+				self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
+				print(f"[Hide] {obj.name}: Group set to '{group_name}'")
+			else:
+				self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
+				print(f"[Hide] {obj.name}: skipped (no matching prefix)")
+		return {'FINISHED'}
 
 
 class OBJECT_OT_SetFractureGroupSupport(bpy.types.Operator):
-    bl_idname = "object.set_fracture_group_support"
-    bl_label = "Set Group: Support"
-    bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_Support'"
+	bl_idname = "object.set_fracture_group_support"
+	bl_label = "Set Group: Support"
+	bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_Support'"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def execute(self, context):
-        for obj in context.selected_objects:
-            if obj.type != 'MESH':
-                self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
-                continue
+	def execute(self, context):
+		for obj in context.selected_objects:
+			if obj.type != 'MESH':
+				self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
+				continue
 
-            match = re.match(r"(Fracture_\d+)", obj.name)
-            if match:
-                group_name = match.group(1) + "_Support"
+			match = re.match(r"(Fracture_\d+)", obj.name)
+			if match:
+				group_name = match.group(1) + "_Support"
 
-                if "group" in obj:
-                    del obj["group"]
-                obj["Group"] = group_name
+				if "group" in obj:
+					del obj["group"]
+				obj["Group"] = group_name
 
-                self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
-                print(f"[Support] {obj.name}: Group set to '{group_name}'")
-            else:
-                self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
-                print(f"[Support] {obj.name}: skipped (no matching prefix)")
-        return {'FINISHED'}
+				self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
+				print(f"[Support] {obj.name}: Group set to '{group_name}'")
+			else:
+				self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
+				print(f"[Support] {obj.name}: skipped (no matching prefix)")
+		return {'FINISHED'}
 
 
 class OBJECT_OT_SetColliderMeshGroups(bpy.types.Operator):
-    bl_idname = "object.set_collidermeshgroups"
-    bl_label = "Set ColliderMeshGroups"
-    bl_description = "Assign ColliderMeshGroups based on Group/group and visible children with same prefix"
+	bl_idname = "object.set_collidermeshgroups"
+	bl_label = "Set ColliderMeshGroups"
+	bl_description = "Assign ColliderMeshGroups based on Group/group and visible children with same prefix"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def execute(self, context):
-        all_objects = bpy.data.objects
-        print("\n[ColliderMeshGroups] Starting processing...")
+	def execute(self, context):
+		all_objects = bpy.data.objects
+		print("\n[ColliderMeshGroups] Starting processing...")
 
-        for obj in context.selected_objects:
-            if obj.type != 'MESH':
-                print(f"[ColliderMeshGroups] Skipped non-mesh: {obj.name}")
-                continue
-            if not obj.visible_get():
-                continue
+		for obj in context.selected_objects:
+			if obj.type != 'MESH':
+				print(f"[ColliderMeshGroups] Skipped non-mesh: {obj.name}")
+				continue
+			if not obj.visible_get():
+				continue
 
-            # Accept both "Group" and "group" keys, with fallback
-            base_group = obj.get("Group") or obj.get("group")
-            if not base_group:
-                print(f"[ColliderMeshGroups] Skipped (no Group/group): {obj.name}")
-                continue
+			# Accept both "Group" and "group" keys, with fallback
+			base_group = obj.get("Group") or obj.get("group")
+			if not base_group:
+				print(f"[ColliderMeshGroups] Skipped (no Group/group): {obj.name}")
+				continue
 
-            base_group = str(base_group).strip()
-            match = re.match(r"(Fracture_\d+)", base_group)
-            if not match:
-                print(f"[ColliderMeshGroups] Skipped (Group format invalid): {obj.name} → {base_group}")
-                continue
+			base_group = str(base_group).strip()
+			match = re.match(r"(Fracture_\d+)", base_group)
+			if not match:
+				print(f"[ColliderMeshGroups] Skipped (Group format invalid): {obj.name} → {base_group}")
+				continue
 
-            root_prefix = match.group(1)
-            collected = set()
-            collected.add(base_group)
+			root_prefix = match.group(1)
+			collected = set()
+			collected.add(base_group)
 
-            print(f"[ColliderMeshGroups] Processing {obj.name}")
-            print(f"  → Group = '{base_group}', root_prefix = {root_prefix}")
+			print(f"[ColliderMeshGroups] Processing {obj.name}")
+			print(f"  → Group = '{base_group}', root_prefix = {root_prefix}")
 
-            for other in all_objects:
-                if other == obj or other.type != 'MESH':
-                    continue
-                if not other.visible_get():
-                    continue
+			for other in all_objects:
+				if other == obj or other.type != 'MESH':
+					continue
+				if not other.visible_get():
+					continue
 
-                # Accept either "Group" or "group"
-                other_group = other.get("Group") or other.get("group")
-                if not other_group:
-                    print(f"    ~ Ignored {other.name} (no Group/group)")
-                    continue
+				# Accept either "Group" or "group"
+				other_group = other.get("Group") or other.get("group")
+				if not other_group:
+					print(f"    ~ Ignored {other.name} (no Group/group)")
+					continue
 
-                other_group = str(other_group).strip()
-                print(f"    > Checking {other.name}: Group = '{other_group}'")
+				other_group = str(other_group).strip()
+				print(f"    > Checking {other.name}: Group = '{other_group}'")
 
-                if other_group.startswith(root_prefix):
-                    collected.add(other_group)
-                    print(f"    + Collected: {other_group}")
-                else:
-                    print(f"    ~ Ignored {other.name} (prefix mismatch: {other_group})")
+				if other_group.startswith(root_prefix):
+					collected.add(other_group)
+					print(f"    + Collected: {other_group}")
+				else:
+					print(f"    ~ Ignored {other.name} (prefix mismatch: {other_group})")
 
-            # Deduplicate and sort
-            unique_sorted = sorted(set(collected))
-            collider_val = '|'.join(unique_sorted)
-            obj["ColliderMeshGroups"] = collider_val
-            self.report({'INFO'}, f"{obj.name} → ColliderMeshGroups = {collider_val}")
-            print(f"[ColliderMeshGroups] {obj.name}: ColliderMeshGroups set to '{collider_val}'")
+			# Deduplicate and sort
+			unique_sorted = sorted(set(collected))
+			collider_val = '|'.join(unique_sorted)
+			obj["ColliderMeshGroups"] = collider_val
+			self.report({'INFO'}, f"{obj.name} → ColliderMeshGroups = {collider_val}")
+			print(f"[ColliderMeshGroups] {obj.name}: ColliderMeshGroups set to '{collider_val}'")
 
-        print("[ColliderMeshGroups] Done.\n")
-        return {'FINISHED'}
+		print("[ColliderMeshGroups] Done.\n")
+		return {'FINISHED'}
 
 
 class OBJECT_OT_SetFractureGroupFrameCut(bpy.types.Operator):
-    bl_idname = "object.set_fracture_group_framecut"
-    bl_label = "Set Group: FrameCut"
-    bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_FrameCut'"
+	bl_idname = "object.set_fracture_group_framecut"
+	bl_label = "Set Group: FrameCut"
+	bl_description = "Set 'Group' attribute using Fracture_XX prefix + '_FrameCut'"
+	bl_options = {"REGISTER", "UNDO", "INTERNAL"}
 
-    def execute(self, context):
-        for obj in context.selected_objects:
-            if obj.type != 'MESH':
-                self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
-                continue
+	def execute(self, context):
+		for obj in context.selected_objects:
+			if obj.type != 'MESH':
+				self.report({'INFO'}, f"Skipped non-mesh: {obj.name}")
+				continue
 
-            match = re.match(r"(Fracture_\d+)", obj.name)
-            if match:
-                group_name = match.group(1) + "_FrameCut"
+			match = re.match(r"(Fracture_\d+)", obj.name)
+			if match:
+				group_name = match.group(1) + "_FrameCut"
 
-                if "group" in obj:
-                    del obj["group"]
-                obj["Group"] = group_name
+				if "group" in obj:
+					del obj["group"]
+				obj["Group"] = group_name
 
-                self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
-                print(f"[FrameCut] {obj.name}: Group set to '{group_name}'")
-            else:
-                self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
-                print(f"[FrameCut] {obj.name}: skipped (no matching prefix)")
-        return {'FINISHED'}
+				self.report({'INFO'}, f"{obj.name} → Group = {group_name}")
+				print(f"[FrameCut] {obj.name}: Group set to '{group_name}'")
+			else:
+				self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
+				print(f"[FrameCut] {obj.name}: skipped (no matching prefix)")
+		return {'FINISHED'}
 
 
 classes = (
