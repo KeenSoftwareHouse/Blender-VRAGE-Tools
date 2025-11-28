@@ -495,13 +495,13 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 	bl_order = 99
 
+	@classmethod
+	def poll(cls, context):
+		return context.scene.vrt.use_experimental_features
+
 	def draw(self, context):
 		layout = self.layout
 		props = context.scene.construction_props
-
-		layout.prop(context.scene.vrt, "use_experimental_features")
-		if not context.scene.vrt.use_experimental_features:
-			return
 
 		layout.prop(props, "selected_preset", text="Presets")
 
@@ -524,15 +524,15 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 		row.label(text="Preset")
 		row.prop(props, "preset", text="")
 
-		row = box.row(align=True)
-		row.prop(props, "apply_order_id", text="")
-		row.label(text="Order ID")
-		row.prop(props, "order_id", text="")
+		# row = box.row(align=True)
+		# row.prop(props, "apply_order_id", text="")
+		# row.label(text="Order ID")
+		# row.prop(props, "order_id", text="")
 
-		row = box.row(align=True)
-		row.prop(props, "apply_order_duration", text="")
-		row.label(text="Order Duration")
-		row.prop(props, "order_duration", text="")
+		# row = box.row(align=True)
+		# row.prop(props, "apply_order_duration", text="")
+		# row.label(text="Order Duration")
+		# row.prop(props, "order_duration", text="")
 
 		layout.separator()
 		layout.operator("object.apply_selected_properties", icon="CHECKMARK")
@@ -540,18 +540,20 @@ class OBJECT_PT_construction_panel(bpy.types.Panel):
 		layout.operator("object.detach_materials_cut_glass_decals", icon="MOD_EXPLODE")
 		layout.prop(props, "make_parent_on_detach", text="Make Parent")
 		
-		layout.separator()
-		box = layout.box()
-		box.prop(props, "show_group_tools", icon="TRIA_DOWN" if props.show_group_tools else "TRIA_RIGHT", emboss=False)
+		# layout.separator()
+		# box = layout.box()
+		# box.prop(props, "show_group_tools", icon="TRIA_DOWN" if props.show_group_tools else "TRIA_RIGHT", emboss=False)
 
-		if props.show_group_tools:
-			box.label(text="Set Group Tags:")
-			box.operator("object.set_fracture_group_default", icon='GROUP')
-			box.operator("object.set_fracture_group_hide", icon='HIDE_ON')
-			box.operator("object.set_fracture_group_support", icon='MOD_BUILD')
-			box.operator("object.set_fracture_group_framecut", icon='MOD_EXPLODE')
-			box.separator()
-			box.operator("object.set_collidermeshgroups", icon='GROUP')
+		# if props.show_group_tools:
+			# box.label(text="Set Group Tags:")
+			# box.operator("object.set_fracture_group_default", icon='GROUP')
+			# box.operator("object.set_fracture_group_hide", icon='HIDE_ON')
+			# box.operator("object.set_fracture_group_support", icon='MOD_BUILD')
+			# box.operator("object.set_fracture_group_framecut", icon='MOD_EXPLODE')
+			# box.separator()
+			# box.operator("object.set_collidermeshgroups", icon='GROUP')
+		layout.separator()
+		layout.operator("object.set_collidermeshgroups", icon='GROUP')
 
 # region GROUP & COLLIDERMESHGROUPS OPERATORS
 
@@ -733,28 +735,3 @@ class OBJECT_OT_SetFractureGroupFrameCut(bpy.types.Operator):
 				self.report({'WARNING'}, f"No Fracture_XX prefix in: {obj.name}")
 				print(f"[FrameCut] {obj.name}: skipped (no matching prefix)")
 		return {'FINISHED'}
-
-
-classes = (
-	ConstructionPropertySettings,
-	OBJECT_PT_construction_panel,
-	OBJECT_OT_apply_selected_properties,
-	OBJECT_OT_detach_materials,
-	OBJECT_OT_select_objects_by_name,
-	OBJECT_OT_SetFractureGroupDefault,
-	OBJECT_OT_SetFractureGroupHide,
-	OBJECT_OT_SetFractureGroupSupport,
-	OBJECT_OT_SetFractureGroupFrameCut,
-	OBJECT_OT_SetColliderMeshGroups,
-)
-
-def register():
-	for cls in classes:
-		bpy.utils.register_class(cls)
-	bpy.types.Scene.construction_props = bpy.props.PointerProperty(type=ConstructionPropertySettings)
-
-def unregister():
-	for cls in reversed(classes):
-		bpy.utils.unregister_class(cls)
-	if hasattr(bpy.types.Scene, "construction_props"):
-		del bpy.types.Scene.construction_props

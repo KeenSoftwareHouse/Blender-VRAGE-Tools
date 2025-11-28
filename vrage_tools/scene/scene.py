@@ -139,6 +139,6 @@ class VRT_Scene(PropertyGroup):
     ) # type: ignore
 
     use_experimental_features: BoolProperty(
-        name="Show Experimental",
-        description="Show experimental features: this section is WIP and subject to change"
+        name="Enable Experimental",
+        description="Enable experimental, work-in-progress features, which may not be compatible with the rest of VRAGE Tools, and may break existing project files."
     ) # type: ignore
