@@ -20,7 +20,7 @@ bl_info = {
     "author" : "Keen Software House",
     "description" : "A Blender Add-on to streamline and simplify the creation of 3D assets for Space Engineers 2",
     "blender" : (4, 3, 0),
-    "version" : (0, 3, 0),
+    "version" : (0, 3, 1),
     "location" : "",
     "warning" : "",
     "category" : "Generic"
@@ -44,6 +44,20 @@ from .utilities.notifications       import *
 from .utilities.update_check        import *
 
 from .utilities.MSFT_Physics        import MSFT_Physics_register, MSFT_Physics_unregister
+
+# Construction Tool - temporary implementation
+from .tmp_construction_stages_tool  import (
+	ConstructionPropertySettings,
+	OBJECT_PT_construction_panel,
+	OBJECT_OT_apply_selected_properties,
+	OBJECT_OT_detach_materials,
+	# OBJECT_OT_select_objects_by_name,
+	OBJECT_OT_SetFractureGroupDefault,
+	OBJECT_OT_SetFractureGroupHide,
+	OBJECT_OT_SetFractureGroupSupport,
+	OBJECT_OT_SetFractureGroupFrameCut,
+	OBJECT_OT_SetColliderMeshGroups
+ )
 
 classes = (
     VRT_AddonPreferences,
@@ -102,6 +116,18 @@ classes = (
 
     VRT_OT_GetCurrentVersion,
     VRT_OT_CheckUpdate,
+    
+    # Construction Tool - temporary implementation
+    ConstructionPropertySettings,
+	OBJECT_PT_construction_panel,
+	OBJECT_OT_apply_selected_properties,
+	OBJECT_OT_detach_materials,
+	# OBJECT_OT_select_objects_by_name,
+	OBJECT_OT_SetFractureGroupDefault,
+	OBJECT_OT_SetFractureGroupHide,
+	OBJECT_OT_SetFractureGroupSupport,
+	OBJECT_OT_SetFractureGroupFrameCut,
+	OBJECT_OT_SetColliderMeshGroups
 )
 
 #region (Un)Register
@@ -118,8 +144,13 @@ def register():
     MSFT_Physics_register()
 
     bpy.app.handlers.load_post.append(file_load_handler)
+    
+    # Construction Tool - temporary implementation
+    bpy.types.Scene.construction_props = bpy.props.PointerProperty(type=ConstructionPropertySettings)
 
 def unregister():
+    # Construction Tool - temporary implementation
+    del bpy.types.Scene.construction_props
 
     MSFT_Physics_unregister()
 

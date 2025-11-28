@@ -92,6 +92,16 @@ class VRT_PT_BlockProperties(Panel):
 
     def draw(self, context):
         layout = self.layout
+        layout.prop(context.scene.vrt, "use_experimental_features")
+
+        if context.scene.vrt.use_experimental_features and len(context.scene.vrt.fractures_list) > 0:
+            box = layout.box()
+            box.alert = True
+            box.label(text="Scene contains Fractures", icon='ERROR')
+            box.alert = False
+            box.label(text="Using experimental features together")
+            box.label(text="with Fractures will result in conflicting")
+            box.label(text="object properties and Editor errors")
 
 class VRT_PT_BlockProperties_subpanel_fractures(Panel):
     bl_idname = 'VRT_PT_BlockProperties_subpanel_fractures'
@@ -111,6 +121,9 @@ class VRT_PT_BlockProperties_subpanel_fractures(Panel):
 
     def draw(self, context):
         layout = self.layout
+
+        layout.active = not context.scene.vrt.use_experimental_features
+        
         # Fracture UI
         list_owner_path, list_prop_name = "scene.vrt.fractures_list".rsplit('.', 1)
         list_owner = context.path_resolve(list_owner_path)

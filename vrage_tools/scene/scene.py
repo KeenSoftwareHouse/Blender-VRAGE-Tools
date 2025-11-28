@@ -137,3 +137,8 @@ class VRT_Scene(PropertyGroup):
         name="Limit to",
         description="Limit which objects to export"
     ) # type: ignore
+
+    use_experimental_features: BoolProperty(
+        name="Enable Experimental",
+        description="Enable experimental, work-in-progress features, which may not be compatible with the rest of VRAGE Tools, and may break existing project files."
+    ) # type: ignore
