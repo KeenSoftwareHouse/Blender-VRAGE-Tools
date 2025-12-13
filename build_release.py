@@ -1,26 +1,46 @@
-import os
+import pathlib
+import re
 import shutil
 
 
 def main():
 
-    src = os.path.join(os.path.dirname(__file__), 'vrage_tools')
+    parent_path = pathlib.Path(__file__).resolve().parent
 
-    with open(os.path.join(src, '__init__.py')) as f:
-        lines = f.read()
-    f.close()
+    if (parent_path.is_dir()):
+        zip_source_path = pathlib.Path.joinpath(parent_path, "vrage_tools")
 
-    version = lines[lines.find('"version" : (') + len('"version" : ('):]
-    version = version[:version.find('),')].replace(', ', '.')
+        with zip_source_path.joinpath("__init__.py").open() as init_file:
+            init_content = init_file.read()
+        init_file.close()
 
-    target = os.path.join(os.path.dirname(__file__), f"vrage_tools_v{version}")
+        addon_version_match = re.search(r"([\"\']version[\"\']\s*:\s*(\(\s*[0-9]*\,\s*[0-9]*\,\s*[0-9]*\)))", init_content)
+        if (addon_version_match is not None):
 
-    shutil.copytree(src, os.path.join(os.path.dirname(__file__), 'temp', 'vrage_tools'))
-    temp_folder = os.path.join(os.path.dirname(__file__), 'temp')
+            addon_version = str(
+                re.sub(
+                    r"[\(*\)*]|\s*",
+                    "",
+                    str(
+                        re.search(
+                            r"(\(\s*[0-9]*\,\s*[0-9]*\,\s*[0-9]*\))",
+                            str(addon_version_match)
+                        ).group()
+                    )
+                )
+            ).replace(",", ".")
 
-    zipfile = shutil.make_archive(target, 'zip', temp_folder)
+            zip_target_path = parent_path.joinpath(f"Blender_VRAGE_Tools_v{addon_version}")
 
-    shutil.rmtree(temp_folder)
+            shutil.copytree(zip_source_path, parent_path.joinpath("temp", "vrage_tools"))
+            temp_folder = parent_path.joinpath("temp")
+
+            zipfile = shutil.make_archive(zip_target_path, "zip", temp_folder)
+            shutil.rmtree(temp_folder)
+        else:
+            raise ValueError(f"Addon version not found Value is: {addon_version_match}")
+    else:
+        raise ValueError(f"Parent_Path is not is not a directory: {parent_path}")
 
 
 if __name__ == '__main__':
